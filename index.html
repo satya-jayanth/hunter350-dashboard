@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hunter 350 - Fuel & Mileage Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navyDark: '#0A1020',
+                        navyCard: '#121C35',
+                        navyBorder: '#1E2D50',
+                        rebelBlue: '#0066FF',
+                        rebelLight: '#00A3FF',
+                        rebelAccent: '#E63946'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0A1020;
+            color: #E2E8F0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(18, 28, 53, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(30, 45, 80, 0.8);
+        }
+        input, select {
+            background-color: #0A1020 !important;
+            border-color: #1E2D50 !important;
+            color: #F8FAFC !important;
+        }
+        input:focus, select:focus {
+            border-color: #0066FF !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.25) !important;
+        }
+    </style>
+</head>
+<body class="pb-12">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass-card border-b border-navyBorder px-4 py-3 shadow-lg">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rebelBlue to-rebelLight flex items-center justify-center text-white font-bold text-lg shadow-md">
+                    <i class="fa-solid fa-motorcycle"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-extrabold tracking-wide text-white uppercase flex items-center gap-2">
+                        Hunter 350 <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-blue-900/60 text-rebelLight border border-blue-500/30">Rebel Blue</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Mileage & Expense Tracker</p>
+                </div>
+            </div>
+            <!-- Persistence Badge -->
+            <div id="storageBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-800 text-gray-300 border border-gray-700">
+                <i class="fa-solid fa-database text-xs"></i>
+                <span id="storageStatusText">Checking...</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-4 space-y-5">
+
+        <!-- Log Refuel Form -->
+        <section class="glass-card rounded-2xl p-4 shadow-xl">
+            <div class="flex items-center justify-between mb-3 border-b border-navyBorder pb-2">
+                <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-gas-pump text-rebelLight"></i> Log Refuel Entry
+                </h2>
+                <span class="text-xs text-blue-400 font-semibold bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800/50">Trip F = 40.0 KM</span>
+            </div>
+
+            <form id="refuelForm" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Odometer Reading (KM)</label>
+                        <input type="number" step="0.1" id="odoInput" required placeholder="e.g. 1240" class="w-full px-3 py-2.5 rounded-xl text-sm border focus:ring-1">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Trip F Distance (KM)</label>
+                        <input type="number" step="0.1" id="tripFInput" value="40.0" required class="w-full px-3 py-2.5 rounded-xl text-sm border font-semibold text-rebelLight">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Fuel Added (Liters)</label>
+                        <input type="number" step="0.01" id="litersInput" placeholder="e.g. 10.5" class="w-full px-3 py-2.5 rounded-xl text-sm border">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Price per Liter (₹)</label>
+                        <input type="number" step="0.01" id="pricePerLiterInput" placeholder="e.g. 102.50" class="w-full px-3 py-2.5 rounded-xl text-sm border">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Total Amount (₹)</label>
+                        <input type="number" step="0.01" id="totalAmountInput" placeholder="Auto-calculated" class="w-full px-3 py-2.5 rounded-xl text-sm border">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Date</label>
+                        <input type="date" id="dateInput" required class="w-full px-3 py-2.5 rounded-xl text-sm border">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3 mt-2 bg-gradient-to-r from-rebelBlue to-rebelLight hover:from-blue-600 hover:to-blue-400 text-white font-bold text-sm rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus-circle"></i> Save Refuel Log
+                </button>
+            </form>
+        </section>
+
+        <!-- KPI Metrics Grid -->
+        <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="glass-card rounded-2xl p-3.5 border-l-4 border-rebelBlue">
+                <p class="text-xs text-gray-400 font-medium">Avg Mileage</p>
+                <h3 id="kpiAvgMileage" class="text-xl font-black text-white mt-0.5">-- <span class="text-xs font-normal text-gray-400">km/L</span></h3>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5 border-l-4 border-rebelLight">
+                <p class="text-xs text-gray-400 font-medium">Last Tank Efficiency</p>
+                <h3 id="kpiLastMileage" class="text-xl font-black text-white mt-0.5">-- <span class="text-xs font-normal text-gray-400">km/L</span></h3>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5 border-l-4 border-emerald-500">
+                <p class="text-xs text-gray-400 font-medium">Total Spend</p>
+                <h3 id="kpiTotalSpend" class="text-xl font-black text-white mt-0.5">₹0</h3>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5 border-l-4 border-amber-500">
+                <p class="text-xs text-gray-400 font-medium">Running Cost</p>
+                <h3 id="kpiCostPerKm" class="text-xl font-black text-white mt-0.5">-- <span class="text-xs font-normal text-gray-400">/km</span></h3>
+            </div>
+        </section>
+
+        <!-- Mileage Chart -->
+        <section class="glass-card rounded-2xl p-4 shadow-xl">
+            <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-chart-line text-rebelBlue"></i> Mileage Trend (km/L)
+            </h3>
+            <div class="h-48 w-full">
+                <canvas id="mileageChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Log History Table -->
+        <section class="glass-card rounded-2xl p-4 shadow-xl">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-rebelLight"></i> Refuel History
+                </h3>
+                <span id="logCountBadge" class="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">0 entries</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-gray-300">
+                    <thead class="bg-navyDark/60 text-gray-400 uppercase font-semibold border-b border-navyBorder">
+                        <tr>
+                            <th class="py-2.5 px-2">Date</th>
+                            <th class="py-2.5 px-2">ODO</th>
+                            <th class="py-2.5 px-2">Trip F</th>
+                            <th class="py-2.5 px-2">Liters</th>
+                            <th class="py-2.5 px-2">Amount</th>
+                            <th class="py-2.5 px-2">km/L</th>
+                            <th class="py-2.5 px-2 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody" class="divide-y divide-navyBorder">
+                        <!-- Rows dynamically rendered -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Data Management & iOS Backup -->
+        <section class="glass-card rounded-2xl p-4 shadow-xl space-y-3">
+            <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved text-emerald-400"></i> Backup & Data Safety
+            </h3>
+            <p class="text-xs text-gray-400">
+                To prevent iOS Safari from clearing logs on app updates, export your data periodically as a JSON backup file.
+            </p>
+            <div class="flex gap-2">
+                <button id="exportBtn" class="flex-1 py-2 px-3 bg-navyDark border border-navyBorder hover:border-rebelBlue text-xs font-bold rounded-xl text-gray-200 flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-download text-rebelLight"></i> Export JSON
+                </button>
+                <label class="flex-1 py-2 px-3 bg-navyDark border border-navyBorder hover:border-rebelBlue text-xs font-bold rounded-xl text-gray-200 flex items-center justify-center gap-1.5 cursor-pointer transition">
+                    <i class="fa-solid fa-upload text-emerald-400"></i> Import JSON
+                    <input type="file" id="importFileInput" accept=".json" class="hidden">
+                </label>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const STORAGE_KEY = 'hunter350_rebel_blue_logs';
+        let logs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        let mileageChart = null;
+
+        // Auto-fill today's date
+        document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+
+        // WebKit Persistent Storage Guard
+        async function initStoragePersistence() {
+            const badgeText = document.getElementById('storageStatusText');
+            const badgeContainer = document.getElementById('storageBadge');
+            
+            if (navigator.storage && navigator.storage.persist) {
+                const isPersisted = await navigator.storage.persisted();
+                if (isPersisted) {
+                    badgeText.innerText = 'Persistent';
+                    badgeContainer.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-800/50';
+                } else {
+                    const granted = await navigator.storage.persist();
+                    if (granted) {
+                        badgeText.innerText = 'Persistent';
+                        badgeContainer.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-800/50';
+                    } else {
+                        badgeText.innerText = 'Standard';
+                    }
+                }
+            } else {
+                badgeText.innerText = 'Standard';
+            }
+        }
+
+        // Live Auto Calculation
+        const litersEl = document.getElementById('litersInput');
+        const priceEl = document.getElementById('pricePerLiterInput');
+        const amountEl = document.getElementById('totalAmountInput');
+
+        litersEl.addEventListener('input', () => {
+            if (litersEl.value && priceEl.value) {
+                amountEl.value = (parseFloat(litersEl.value) * parseFloat(priceEl.value)).toFixed(2);
+            }
+        });
+
+        priceEl.addEventListener('input', () => {
+            if (litersEl.value && priceEl.value) {
+                amountEl.value = (parseFloat(litersEl.value) * parseFloat(priceEl.value)).toFixed(2);
+            }
+        });
+
+        // Add Log
+        document.getElementById('refuelForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const odo = parseFloat(document.getElementById('odoInput').value);
+            const tripF = parseFloat(document.getElementById('tripFInput').value);
+            const liters = parseFloat(document.getElementById('litersInput').value) || 0;
+            const price = parseFloat(document.getElementById('pricePerLiterInput').value) || 0;
+            let amount = parseFloat(document.getElementById('totalAmountInput').value) || (liters * price);
+            const date = document.getElementById('dateInput').value;
+
+            const newEntry = {
+                id: Date.now(),
+                odo,
+                tripF,
+                liters,
+                price,
+                amount,
+                date
+            };
+
+            logs.push(newEntry);
+            logs.sort((a, b) => new Date(a.date) - new Date(b.date) || a.odo - b.odo);
+            saveAndRender();
+
+            // Reset form input values except default Trip F
+            document.getElementById('odoInput').value = '';
+            document.getElementById('litersInput').value = '';
+            document.getElementById('pricePerLiterInput').value = '';
+            document.getElementById('totalAmountInput').value = '';
+        });
+
+        // Save & Render Engine
+        function saveAndRender() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+            renderDashboard();
+        }
+
+        // Delete Individual Log
+        function deleteLog(id) {
+            if (confirm("Delete this refuel log?")) {
+                logs = logs.filter(log => log.id !== id);
+                saveAndRender();
+            }
+        }
+
+        // Calculate Mileage Metrics
+        function computeMetrics() {
+            if (logs.length < 2) return { calculatedLogs: logs, avgMileage: 0, lastMileage: 0, totalSpend: 0, costPerKm: 0 };
+
+            let totalDistanceCalculated = 0;
+            let totalFuelConsumed = 0;
+            let totalSpend = 0;
+            let lastMileage = 0;
+
+            const calculatedLogs = logs.map((log, index) => {
+                totalSpend += log.amount || 0;
+                if (index === 0) {
+                    return { ...log, mileage: null };
+                }
+
+                const prevLog = logs[index - 1];
+                const distanceDriven = log.odo - prevLog.odo;
+                const mileage = log.liters > 0 ? (distanceDriven / log.liters) : null;
+
+                if (mileage) {
+                    totalDistanceCalculated += distanceDriven;
+                    totalFuelConsumed += log.liters;
+                    lastMileage = mileage;
+                }
+
+                return { ...log, distanceDriven, mileage };
+            });
+
+            const avgMileage = totalFuelConsumed > 0 ? (totalDistanceCalculated / totalFuelConsumed) : 0;
+            const totalKmRun = logs[logs.length - 1].odo - logs[0].odo;
+            const costPerKm = totalKmRun > 0 ? (totalSpend / totalKmRun) : 0;
+
+            return { calculatedLogs, avgMileage, lastMileage, totalSpend, costPerKm };
+        }
+
+        // Render Dashboard UI & Charts
+        function renderDashboard() {
+            const { calculatedLogs, avgMileage, lastMileage, totalSpend, costPerKm } = computeMetrics();
+
+            // Update KPIs
+            document.getElementById('kpiAvgMileage').innerHTML = avgMileage > 0 ? `${avgMileage.toFixed(1)} <span class="text-xs font-normal text-gray-400">km/L</span>` : `-- <span class="text-xs font-normal text-gray-400">km/L</span>`;
+            document.getElementById('kpiLastMileage').innerHTML = lastMileage > 0 ? `${lastMileage.toFixed(1)} <span class="text-xs font-normal text-gray-400">km/L</span>` : `-- <span class="text-xs font-normal text-gray-400">km/L</span>`;
+            document.getElementById('kpiTotalSpend').innerText = `₹${totalSpend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+            document.getElementById('kpiCostPerKm').innerHTML = costPerKm > 0 ? `₹${costPerKm.toFixed(2)} <span class="text-xs font-normal text-gray-400">/km</span>` : `-- <span class="text-xs font-normal text-gray-400">/km</span>`;
+            document.getElementById('logCountBadge').innerText = `${logs.length} entries`;
+
+            // Render Table
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = '';
+
+            if (logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-gray-500">No refuel entries recorded yet. Log your first fill above!</td></tr>`;
+            } else {
+                [...calculatedLogs].reverse().forEach(log => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-navyDark/40 transition-colors";
+                    row.innerHTML = `
+                        <td class="py-3 px-2 font-medium">${log.date}</td>
+                        <td class="py-3 px-2">${log.odo} km</td>
+                        <td class="py-3 px-2 text-rebelLight font-semibold">${log.tripF} km</td>
+                        <td class="py-3 px-2">${log.liters ? log.liters.toFixed(2) : '-'} L</td>
+                        <td class="py-3 px-2">₹${log.amount ? log.amount.toFixed(0) : '-'}</td>
+                        <td class="py-3 px-2 font-bold text-emerald-400">${log.mileage ? log.mileage.toFixed(1) : 'Init'}</td>
+                        <td class="py-3 px-2 text-right">
+                            <button onclick="deleteLog(${log.id})" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 bg-red-950/40 border border-red-800/40 rounded-lg">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Render Chart
+            renderChart(calculatedLogs);
+        }
+
+        function renderChart(calculatedLogs) {
+            const ctx = document.getElementById('mileageChart').getContext('2d');
+            const validData = calculatedLogs.filter(l => l.mileage !== null);
+
+            const labels = validData.map(l => l.date);
+            const dataPoints = validData.map(l => l.mileage.toFixed(1));
+
+            if (mileageChart) mileageChart.destroy();
+
+            mileageChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Mileage (km/L)',
+                        data: dataPoints.length ? dataPoints : [0],
+                        borderColor: '#0066FF',
+                        backgroundColor: 'rgba(0, 102, 255, 0.15)',
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#00A3FF',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#64748B', font: { size: 10 } } },
+                        y: { grid: { color: '#1E2D50' }, ticks: { color: '#64748B', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // Export JSON
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hunter350_rebel_blue_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Import JSON
+        document.getElementById('importFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedLogs = JSON.parse(event.target.result);
+                    if (Array.isArray(importedLogs)) {
+                        logs = importedLogs;
+                        saveAndRender();
+                        alert('Data successfully imported!');
+                    }
+                } catch (err) {
+                    alert('Invalid JSON backup file.');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Run
+        initStoragePersistence();
+        renderDashboard();
+    </script>
+</body>
+</html>
